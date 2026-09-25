@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pay via M-Pesa — OJ Apartment</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Nav hamburger (shared) ── */
+    .nav-toggle {
+      display: none; flex-direction: column; justify-content: center;
+      gap: 5px; background: none; border: none; cursor: pointer; padding: 4px; z-index: 201;
+    }
+    .nav-toggle span { display: block; width: 26px; height: 2.5px; background: var(--text); border-radius: 2px; transition: transform .3s, opacity .3s; }
+    .nav-toggle.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .nav-toggle.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .nav-toggle.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+    .nav-drawer { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+    .nav-drawer-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.7); opacity: 0; transition: opacity .3s; backdrop-filter: blur(4px); }
+    .nav-drawer-panel { position: absolute; top: 0; right: 0; width: min(320px,85vw); height: 100%; background: var(--dark-card); border-left: 1px solid var(--dark-border); transform: translateX(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; padding: 5.5rem 2rem 2rem; }
+    .nav-drawer.open { pointer-events: all; }
+    .nav-drawer.open .nav-drawer-backdrop { opacity: 1; }
+    .nav-drawer.open .nav-drawer-panel { transform: translateX(0); }
+    .nav-drawer-panel a { display: flex; align-items: center; gap: .75rem; padding: 1rem 0; border-bottom: 1px solid var(--dark-border); font-size: 1rem; color: var(--text); transition: color .2s; }
+    .nav-drawer-panel a:hover { color: var(--gold); }
+    .nav-drawer-panel a .nav-icon { font-size: 1.2rem; width: 24px; text-align: center; }
+    .nav-drawer-logo { font-size: 1.1rem; font-weight: 700; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; margin-bottom: .25rem; }
+    .nav-drawer-tagline { font-size: .78rem; color: var(--text-muted); margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--dark-border); }
+    .nav-drawer-cta { margin-top: 2rem; }
+    @media (max-width: 768px) { .navbar .nav-links { display: none; } .nav-toggle { display: flex; } }
+
+    /* ── Page layout ── */
+    .back-link { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--text-muted); margin-bottom: 2rem; transition: color .2s; }
+    .back-link:hover { color: var(--gold); }
+
+    .divider { border: none; border-top: 1px solid var(--dark-border); margin: 1.5rem 0; }
+    .section-label { font-size: .78rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; }
+
+    /* ── M-Pesa brand block ── */
+    .mpesa-brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: linear-gradient(135deg, #006633 0%, #00a650 100%);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .mpesa-logo-circle {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.7rem; flex-shrink: 0;
+    }
+    .mpesa-brand-text .brand-name { font-size: 1.3rem; font-weight: 800; color: #fff; letter-spacing: 1px; }
+    .mpesa-brand-text .brand-sub  { font-size: .8rem; color: rgba(255,255,255,.75); }
+
+    /* ── Phone input with flag prefix ── */
+    .phone-input-wrap {
+      display: flex;
+      align-items: stretch;
+      background: var(--dark-mid);
+      border: 1px solid var(--dark-border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .phone-input-wrap:focus-within { border-color: #00a650; }
+    .phone-prefix {
+      display: flex; align-items: center; gap: .4rem;
+      padding: .75rem 1rem;
+      background: rgba(0,166,80,.12);
+      border-right: 1px solid var(--dark-border);
+      font-size: .9rem; color: #fff; white-space: nowrap; flex-shrink: 0;
+    }
+    .phone-prefix .flag { font-size: 1.2rem; }
+    .phone-input-wrap input {
+      flex: 1; background: none; border: none;
+      padding: .75rem 1rem; color: var(--text);
+      font-size: 1rem; outline: none;
+    }
+    .phone-input-wrap input::placeholder { color: #555; }
+
+    /* ── STK status steps ── */
+    .stk-steps {
+      display: none;
+      flex-direction: column;
+      gap: .75rem;
+      margin: 1.5rem 0;
+    }
+    .stk-steps.visible { display: flex; }
+    .stk-step {
+      display: flex; align-items: center; gap: .9rem;
+      background: var(--dark-mid);
+      border: 1px solid var(--dark-border);
+      border-radius: 10px;
+      padding: .9rem 1rem;
+      font-size: .9rem;
+      opacity: .4;
+      transition: opacity .4s, border-color .4s;
+    }
+    .stk-step.done  { opacity: 1; border-color: #00a650; }
+    .stk-step.active { opacity: 1; border-color: var(--gold); }
+    .stk-step .step-icon { font-size: 1.3rem; width: 28px; text-align: center; flex-shrink: 0; }
+    .stk-step .step-text { flex: 1; }
+    .stk-step .step-text strong { display: block; }
+    .stk-step .step-text span { font-size: .8rem; color: var(--text-muted); }
+    .stk-spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid var(--dark-border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .stk-tick { color: #00a650; font-size: 1.1rem; flex-shrink: 0; }
+
+    /* ── Phone confirmation pill ── */
+    .phone-pill {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(0,166,80,.12); border: 1px solid rgba(0,166,80,.35);
+      border-radius: 50px; padding: .35rem .9rem;
+      font-size: .85rem; color: #fff; margin-bottom: 1.5rem;
+    }
+
+    /* ── Resend / cancel row ── */
+    .stk-actions { display: flex; gap: 1rem; margin-top: .5rem; flex-wrap: wrap; }
+    .stk-actions button { background: none; border: none; font-size: .85rem; cursor: pointer; padding: 0; }
+    .stk-actions .btn-resend { color: var(--gold); }
+    .stk-actions .btn-cancel { color: var(--text-muted); }
+    .stk-actions button:hover { text-decoration: underline; }
+
+    /* ── Manual USSD fallback ── */
+    .ussd-box {
+      background: var(--dark-mid); border: 1px solid var(--dark-border);
+      border-radius: 10px; padding: 1.1rem 1.25rem;
+      font-size: .88rem; line-height: 1.9;
+    }
+    .ussd-code {
+      font-family: 'Courier New', monospace;
+      background: rgba(0,166,80,.15); border: 1px solid rgba(0,166,80,.3);
+      color: #4dff9a; border-radius: 6px;
+      padding: .2rem .55rem; font-size: .92rem;
+    }
+
+    /* ── Success overlay ── */
+    #success-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.88); z-index: 300;
+      align-items: center; justify-content: center;
+      flex-direction: column; text-align: center; padding: 2rem;
+    }
+    #success-overlay.show { display: flex; }
+    .success-box {
+      background: var(--dark-card); border: 1px solid rgba(0,166,80,.4);
+      border-radius: 20px; padding: 3rem 2.5rem;
+      max-width: 420px; width: 100%;
+    }
+    .success-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .success-box h2 { font-size: 1.6rem; margin-bottom: .5rem; color: #00a650; }
+    .success-box p  { color: var(--text-muted); margin-bottom: 2rem; font-size: .95rem; }
+    .progress-bar  { height: 4px; background: var(--dark-border); border-radius: 2px; overflow: hidden; margin-bottom: .75rem; }
+    .progress-fill { height: 100%; background: #00a650; width: 0%; transition: width 3s linear; }
+    .redirect-note { font-size: .8rem; color: var(--text-muted); }
+
+    /* ── Toast (needed here too) ── */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--dark-card); border: 1px solid var(--dark-border); border-left: 4px solid var(--success); border-radius: 10px; padding: 1rem 1.5rem; font-size: .9rem; box-shadow: var(--shadow); z-index: 400; transform: translateY(100px); opacity: 0; transition: transform .3s ease, opacity .3s ease; max-width: 320px; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { border-left-color: var(--danger); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="logo">OJ <span>Apartment</span></div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#about">About</a>
+      <a href="index.html#pricing">Access Plans</a>
+      <a href="apartments.html">Vacancies</a>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="nav-drawer" id="nav-drawer" role="dialog" aria-modal="true" aria-label="Navigation menu">
+    <div class="nav-drawer-backdrop" id="nav-backdrop"></div>
+    <div class="nav-drawer-panel">
+      <div class="nav-drawer-logo">OJ Apartment</div>
+      <div class="nav-drawer-tagline">Premium Residential Building · Nairobi</div>
+      <a href="index.html"         onclick="closeDrawer()"><span class="nav-icon">🏠</span> Home</a>
+      <a href="index.html#about"   onclick="closeDrawer()"><span class="nav-icon">🏢</span> About</a>
+      <a href="index.html#how"     onclick="closeDrawer()"><span class="nav-icon">📋</span> How It Works</a>
+      <a href="index.html#pricing" onclick="closeDrawer()"><span class="nav-icon">💳</span> Access Plans</a>
+      <a href="apartments.html"    onclick="closeDrawer()"><span class="nav-icon">🔍</span> Vacancies</a>
+      <div class="nav-drawer-cta">
+        <a href="index.html" class="btn btn-gold btn-full" onclick="closeDrawer()">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Payment page ── -->
+  <div class="payment-page">
+    <div class="payment-box">
+      <a href="index.html" class="back-link">← Change plan</a>
+
+      <!-- M-Pesa brand header -->
+      <div class="mpesa-brand">
+        <div class="mpesa-logo-circle">📱</div>
+        <div class="mpesa-brand-text">
+          <div class="brand-name">M-PESA</div>
+          <div class="brand-sub">Lipa Na M-Pesa · Secure Mobile Payment</div>
+        </div>
+      </div>
+
+      <!-- Plan summary -->
+      <div class="plan-summary">
+        <div>
+          <div class="plan-label">Selected Plan</div>
+          <div id="plan-name-display" style="font-weight:600;font-size:1rem;margin-top:.2rem;">Standard Access</div>
+        </div>
+        <div class="plan-amount" id="plan-amount-display">KES 1,950</div>
+      </div>
+
+      <!-- ── Step 1: Your details ── -->
+      <div id="step-details">
+        <div class="section-label">Your Details</div>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="full-name" placeholder="John Kamau" autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="john@email.com" autocomplete="email" />
+        </div>
+
+        <hr class="divider" />
+
+        <!-- M-Pesa phone number -->
+        <div class="section-label">M-Pesa Phone Number</div>
+        <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;">
+          Enter the Safaricom number registered to your M-Pesa account. You'll receive an STK push prompt to confirm payment.
+        </p>
+        <div class="form-group">
+          <label>Safaricom Number</label>
+          <div class="phone-input-wrap">
+            <div class="phone-prefix">
+              <span class="flag">🇰🇪</span> +254
+            </div>
+            <input type="tel" id="mpesa-phone"
+              placeholder="7XX XXX XXX"
+              maxlength="9"
+              oninput="this.value=this.value.replace(/\D/g,'')"
+              autocomplete="tel" />
+          </div>
+          <div style="font-size:.78rem;color:var(--text-muted);margin-top:.4rem;">e.g. 712345678 — do not include the leading 0</div>
+        </div>
+
+        <button class="btn btn-gold btn-full" style="margin-top:.5rem;background:linear-gradient(135deg,#006633,#00a650);border:none;" onclick="initiateMpesa()">
+          📲 &nbsp;Send M-Pesa Request
+        </button>
+
+        <div class="secure-note" style="margin-top:1.25rem;">
+          🔒 &nbsp;Powered by Safaricom M-Pesa &nbsp;·&nbsp; SSL Secured
+        </div>
+      </div>
+
+      <!-- ── Step 2: STK Push sent ── -->
+      <div id="step-stk" style="display:none;">
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <div style="font-size:3rem;">📲</div>
+          <h3 style="font-size:1.3rem;margin:.5rem 0 .3rem;">Check Your Phone!</h3>
+          <p style="font-size:.88rem;color:var(--text-muted);">An M-Pesa payment request has been sent to</p>
+          <div class="phone-pill" style="margin:.6rem auto 0;display:inline-flex;">
+            🇰🇪 &nbsp;<strong id="phone-display">+254 7XX XXX XXX</strong>
+          </div>
+        </div>
+
+        <!-- Progress steps -->
+        <div class="stk-steps visible" id="stk-steps">
+          <div class="stk-step done" id="stk-s1">
+            <span class="step-icon">✅</span>
+            <div class="step-text">
+              <strong>Request Sent</strong>
+              <span>STK push dispatched to your Safaricom number</span>
+            </div>
+            <span class="stk-tick">✓</span>
+          </div>
+          <div class="stk-step active" id="stk-s2">
+            <span class="step-icon">🔔</span>
+            <div class="step-text">
+              <strong>Waiting for PIN</strong>
+              <span>Enter your M-Pesa PIN on your phone to confirm</span>
+            </div>
+            <span class="stk-spinner" id="spinner-2"></span>
+          </div>
+          <div class="stk-step" id="stk-s3">
+            <span class="step-icon">✅</span>
+            <div class="step-text">
+              <strong>Payment Confirmed</strong>
+              <span>Transaction verified by M-Pesa</span>
+            </div>
+          </div>
+          <div class="stk-step" id="stk-s4">
+            <span class="step-icon">🔓</span>
+            <div class="step-text">
+              <strong>Access Granted</strong>
+              <span>Redirecting to vacancy listings...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stk-actions">
+          <button class="btn-resend" onclick="resendPush()">🔄 Resend request</button>
+          <button class="btn-cancel" onclick="cancelPayment()">✕ Cancel &amp; change number</button>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Manual USSD fallback -->
+        <div class="section-label">Didn't receive the prompt?</div>
+        <div class="ussd-box">
+          You can also pay manually via USSD:<br/>
+          1. Dial <span class="ussd-code">*150*00#</span> on your phone<br/>
+          2. Select <strong>Lipa na M-Pesa</strong><br/>
+          3. Select <strong>Pay Bill</strong><br/>
+          4. Business No: <span class="ussd-code">522522</span><br/>
+          5. Account No: <span class="ussd-code" id="ussd-ref">OJ-STD-001</span><br/>
+          6. Amount: <span class="ussd-code" id="ussd-amount">KES 1,950</span><br/>
+          7. Enter your M-Pesa PIN &amp; confirm
+        </div>
+        <p style="font-size:.8rem;color:var(--text-muted);margin-top:.75rem;">After manual payment, click the button below to verify.</p>
+        <button class="btn btn-outline btn-full" style="margin-top:.5rem;" onclick="manualConfirm()">
+          I've Completed the Payment
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Success overlay ── -->
+  <div id="success-overlay">
+    <div class="success-box">
+      <div class="success-icon">🎉</div>
+      <h2>Payment Confirmed!</h2>
+      <p>M-Pesa payment received. Your access is now active. Redirecting you to the vacancy listings...</p>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="redirect-note">Redirecting in 3 seconds...</div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ── Nav drawer ── */
+    const toggle   = document.getElementById('nav-toggle');
+    const drawer   = document.getElementById('nav-drawer');
+    const backdrop = document.getElementById('nav-backdrop');
+    function openDrawer()  { toggle.classList.add('open');    drawer.classList.add('open');    toggle.setAttribute('aria-expanded','true');  document.body.style.overflow='hidden'; }
+    function closeDrawer() { toggle.classList.remove('open'); drawer.classList.remove('open'); toggle.setAttribute('aria-expanded','false'); document.body.style.overflow=''; }
+    toggle.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+    backdrop.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => { if (e.key==='Escape') closeDrawer(); });
+
+    /* ── Plan from URL ── */
+    const params = new URLSearchParams(window.location.search);
+    const plan   = params.get('plan')   || 'standard';
+    const amount = params.get('amount') || '15';
+
+    // Convert USD to KES (approx 1 USD ≈ 130 KES) for M-Pesa display
+    const kesRates = { '5': '650', '15': '1,950', '30': '3,900' };
+    const kesAmount = kesRates[amount] || (parseInt(amount) * 130).toLocaleString();
+
+    const planNames = { basic: 'Basic Access', standard: 'Standard Access', premium: 'Premium Access' };
+    document.getElementById('plan-name-display').textContent = planNames[plan] || 'Standard Access';
+    document.getElementById('plan-amount-display').textContent = 'KES ' + kesAmount;
+    document.getElementById('ussd-amount').textContent = 'KES ' + kesAmount;
+
+    // Generate reference code
+    const planCodes = { basic: 'BSC', standard: 'STD', premium: 'PRM' };
+    const refCode = 'OJ-' + (planCodes[plan] || 'STD') + '-' + Math.floor(1000 + Math.random() * 9000);
+    document.getElementById('ussd-ref').textContent = refCode;
+
+    let storedName  = '';
+    let storedEmail = '';
+    let storedPhone = '';
+    let stkTimer    = null;
+
+    /* ── Validate and send STK Push ── */
+    function initiateMpesa() {
+      const name  = document.getElementById('full-name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('mpesa-phone').value.trim();
+
+      if (!name)  { showToast('Please enter your full name.', 'error'); return; }
+      if (!email || !email.includes('@')) { showToast('Please enter a valid email address.', 'error'); return; }
+      if (!phone || phone.length < 9) { showToast('Please enter a valid 9-digit Safaricom number.', 'error'); return; }
+      if (!['07','01','7','1'].some(p => phone.startsWith(p.replace(/^0/,'')))) {
+        // basic Safaricom prefix check (7xx / 1xx without leading 0)
+      }
+
+      storedName  = name;
+      storedEmail = email;
+      storedPhone = '+254' + phone;
+
+      // Show phone in the STK step
+      document.getElementById('phone-display').textContent = storedPhone;
+
+      // Switch views
+      document.getElementById('step-details').style.display = 'none';
+      document.getElementById('step-stk').style.display     = 'block';
+
+      /*
+       * ── Real integration note ──
+       * In production, replace the simulation below with a fetch() call to
+       * your backend endpoint that calls the Safaricom Daraja API:
+       *
+       *   POST https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest
+       *   {
+       *     BusinessShortCode, Password, Timestamp, TransactionType: "CustomerPayBillOnline",
+       *     Amount: <KES amount>, PartyA: <phone>, PartyB: <shortcode>,
+       *     PhoneNumber: <phone>, CallBackURL, AccountReference: <refCode>,
+       *     TransactionDesc: "OJ Apartment Access"
+       *   }
+       *
+       * Then poll your callback endpoint (or use WebSockets) to detect
+       * ResultCode 0 (success) and call completePayment() below.
+       */
+      simulateStkPush();
+    }
+
+    /* ── Simulate the STK push flow (replace with real Daraja polling) ── */
+    function simulateStkPush() {
+      clearTimeout(stkTimer);
+      // Reset steps
+      document.getElementById('stk-s2').classList.add('active');
+      document.getElementById('stk-s3').classList.remove('done','active');
+      document.getElementById('stk-s4').classList.remove('done','active');
+
+      // After ~5 s simulate user entering PIN and payment succeeding
+      stkTimer = setTimeout(() => {
+        document.getElementById('stk-s2').classList.remove('active');
+        document.getElementById('stk-s2').classList.add('done');
+        document.getElementById('stk-s2').querySelector('.stk-spinner').style.display = 'none';
+        document.getElementById('stk-s2').insertAdjacentHTML('beforeend','<span class="stk-tick">✓</span>');
+
+        document.getElementById('stk-s3').classList.add('active');
+        const sp3 = document.createElement('span'); sp3.className = 'stk-spinner'; sp3.id = 'spinner-3';
+        document.getElementById('stk-s3').appendChild(sp3);
+
+        setTimeout(() => {
+          document.getElementById('stk-s3').classList.remove('active');
+          document.getElementById('stk-s3').classList.add('done');
+          sp3.remove();
+          document.getElementById('stk-s3').insertAdjacentHTML('beforeend','<span class="stk-tick">✓</span>');
+          document.getElementById('stk-s4').classList.add('active');
+
+          setTimeout(completePayment, 800);
+        }, 2000);
+      }, 5000);
+    }
+
+    /* ── Finalize access grant + success screen ── */
+    function completePayment() {
+      document.getElementById('stk-s4').classList.remove('active');
+      document.getElementById('stk-s4').classList.add('done');
+      document.getElementById('stk-s4').insertAdjacentHTML('beforeend','<span class="stk-tick">✓</span>');
+
+      grantAccess(plan, storedName, storedEmail);
+
+      const overlay = document.getElementById('success-overlay');
+      overlay.classList.add('show');
+      setTimeout(() => { document.getElementById('progress-fill').style.width = '100%'; }, 100);
+      setTimeout(() => { window.location.href = 'apartments.html'; }, 3200);
+    }
+
+    /* ── Resend push ── */
+    function resendPush() {
+      // Reset step 2 spinner
+      const s2 = document.getElementById('stk-s2');
+      s2.classList.remove('done'); s2.classList.add('active');
+      s2.querySelectorAll('.stk-tick').forEach(el => el.remove());
+      const sp = document.createElement('span'); sp.className = 'stk-spinner'; sp.id = 'spinner-2';
+      s2.appendChild(sp);
+      document.getElementById('stk-s3').classList.remove('done','active');
+      document.getElementById('stk-s3').querySelectorAll('.stk-tick').forEach(el => el.remove());
+      document.getElementById('stk-s4').classList.remove('done','active');
+      showToast('📲 New M-Pesa request sent to ' + storedPhone);
+      simulateStkPush();
+    }
+
+    /* ── Cancel and go back ── */
+    function cancelPayment() {
+      clearTimeout(stkTimer);
+      document.getElementById('step-stk').style.display    = 'none';
+      document.getElementById('step-details').style.display = 'block';
+    }
+
+    /* ── Manual / USSD confirm ── */
+    function manualConfirm() {
+      clearTimeout(stkTimer);
+      completePayment();
+    }
+  </script>
+</body>
+</html>

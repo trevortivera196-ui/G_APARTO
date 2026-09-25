@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payroll Dashboard — OJ Apartment</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="payroll.css" />
+  <style>
+    /* Nav hamburger */
+    .nav-toggle { display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:4px;z-index:201; }
+    .nav-toggle span { display:block;width:26px;height:2.5px;background:var(--text);border-radius:2px;transition:transform .3s,opacity .3s; }
+    .nav-toggle.open span:nth-child(1){transform:translateY(7.5px) rotate(45deg);}
+    .nav-toggle.open span:nth-child(2){opacity:0;transform:scaleX(0);}
+    .nav-toggle.open span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg);}
+    .nav-drawer{position:fixed;inset:0;z-index:200;pointer-events:none;}
+    .nav-drawer-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.7);opacity:0;transition:opacity .3s;backdrop-filter:blur(4px);}
+    .nav-drawer-panel{position:absolute;top:0;right:0;width:min(320px,85vw);height:100%;background:var(--dark-card);border-left:1px solid var(--dark-border);transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;padding:5.5rem 2rem 2rem;}
+    .nav-drawer.open{pointer-events:all;}
+    .nav-drawer.open .nav-drawer-backdrop{opacity:1;}
+    .nav-drawer.open .nav-drawer-panel{transform:translateX(0);}
+    .nav-drawer-panel a{display:flex;align-items:center;gap:.75rem;padding:1rem 0;border-bottom:1px solid var(--dark-border);font-size:1rem;color:var(--text);transition:color .2s;}
+    .nav-drawer-panel a:hover{color:var(--gold);}
+    .nav-drawer-panel a .nav-icon{font-size:1.2rem;width:24px;text-align:center;}
+    .nav-drawer-logo{font-size:1.1rem;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:.25rem;}
+    .nav-drawer-tagline{font-size:.78rem;color:var(--text-muted);margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--dark-border);}
+    .nav-drawer-cta{margin-top:2rem;}
+    @media(max-width:768px){.navbar .nav-links{display:none;}.nav-toggle{display:flex;}}
+  </style>
+</head>
+<body>
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="logo">OJ <span>Apartment</span></div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="apartments.html">Vacancies</a>
+      <a href="payroll.html" class="active">Payroll</a>
+      <a href="payment.html?plan=standard&amount=15" class="btn btn-gold" style="padding:.5rem 1.25rem;font-size:.85rem;">View Vacancies</a>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="nav-drawer" id="nav-drawer" role="dialog" aria-modal="true">
+    <div class="nav-drawer-backdrop" id="nav-backdrop"></div>
+    <div class="nav-drawer-panel">
+      <div class="nav-drawer-logo">OJ Apartment</div>
+      <div class="nav-drawer-tagline">Premium Residential Building</div>
+      <a href="index.html"      onclick="closeDrawer()"><span class="nav-icon">🏠</span> Home</a>
+      <a href="apartments.html" onclick="closeDrawer()"><span class="nav-icon">🔍</span> Vacancies</a>
+      <a href="payroll.html"    onclick="closeDrawer()"><span class="nav-icon">💼</span> Payroll</a>
+      <a href="index.html#pricing" onclick="closeDrawer()"><span class="nav-icon">💳</span> Access Plans</a>
+    </div>
+  </div>
+
+  <!-- ── Dashboard layout ── -->
+  <div class="dashboard-wrap">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+      <div class="sidebar-section-label">Overview</div>
+      <button class="sidebar-link active" onclick="showTab('overview', this)">
+        <span class="sl-icon">📊</span> Dashboard
+      </button>
+      <button class="sidebar-link" onclick="showTab('staff', this)">
+        <span class="sl-icon">👥</span> Staff
+      </button>
+
+      <div class="sidebar-section-label">Payroll</div>
+      <button class="sidebar-link" onclick="showTab('run-payroll', this)">
+        <span class="sl-icon">▶️</span> Run Payroll
+      </button>
+      <button class="sidebar-link" onclick="showTab('history', this)">
+        <span class="sl-icon">🗂️</span> History
+      </button>
+
+      <div class="sidebar-section-label">Finance</div>
+      <button class="sidebar-link" onclick="showTab('withdrawal', this)">
+        <span class="sl-icon">📲</span> Withdrawals
+      </button>
+      <button class="sidebar-link" onclick="showTab('settings', this)">
+        <span class="sl-icon">⚙️</span> Settings
+      </button>
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sb-avatar">AD</div>
+          <div>
+            <div class="sidebar-user-name" id="sb-name">Admin</div>
+            <div class="sidebar-user-role">Property Manager</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class="dashboard-main">
+
+      <!-- ════ OVERVIEW TAB ════ -->
+      <div id="tab-overview" class="dash-tab">
+        <div class="page-title">Payroll Dashboard</div>
+        <div class="page-breadcrumb">OJ Apartment &rsaquo; <span>Payroll Overview</span></div>
+
+        <div class="overview-cards" id="overview-cards">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Recent transactions -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2>💳 Recent Transactions</h2>
+            <div class="panel-actions">
+              <button class="btn btn-outline" style="padding:.45rem 1rem;font-size:.82rem;" onclick="showTab('history', document.querySelector('.sidebar-link:nth-child(6)'))">View All</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="tx-list" id="recent-tx-list"><!-- JS --></div>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="panel">
+          <div class="panel-header"><h2>⚡ Quick Actions</h2></div>
+          <div class="panel-body" style="display:flex;gap:1rem;flex-wrap:wrap;">
+            <button class="btn btn-gold" onclick="showTab('run-payroll', null)">▶️ &nbsp;Run This Month's Payroll</button>
+            <button class="btn btn-outline" onclick="showTab('withdrawal', null)">📲 &nbsp;New Withdrawal</button>
+            <button class="btn btn-outline" onclick="showTab('staff', null)">👤 &nbsp;Add Staff Member</button>
+            <button class="btn btn-outline" onclick="showTab('settings', null)">⚙️ &nbsp;Payroll Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ STAFF TAB ════ -->
+      <div id="tab-staff" class="dash-tab" style="display:none;">
+        <div class="page-title">Staff Management</div>
+        <div class="page-breadcrumb">OJ Apartment &rsaquo; <span>Staff</span></div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>👥 All Staff (<span id="staff-count">0</span>)</h2>
+            <div class="panel-actions">
+              <input type="text" id="staff-search" placeholder="Search staff…"
+                oninput="filterStaff()"
+                style="background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.5rem .9rem;color:var(--text);font-size:.85rem;outline:none;width:200px;" />
+              <select id="staff-dept-filter" onchange="filterStaff()"
+                style="background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.5rem .9rem;color:var(--text);font-size:.85rem;outline:none;">
+                <option value="">All Departments</option>
+                <option>Management</option>
+                <option>Security</option>
+                <option>Maintenance</option>
+                <option>Cleaning</option>
+                <option>Reception</option>
+              </select>
+              <button class="btn btn-gold" style="padding:.5rem 1rem;font-size:.82rem;" onclick="openAddStaffModal()">+ Add Staff</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="staff-table" id="staff-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th>Role</th>
+                  <th>M-Pesa No.</th>
+                  <th>Salary (KES)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="staff-tbody"><!-- JS --></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ RUN PAYROLL TAB ════ -->
+      <div id="tab-run-payroll" class="dash-tab" style="display:none;">
+        <div class="page-title">Run Payroll</div>
+        <div class="page-breadcrumb">OJ Apartment &rsaquo; <span>Run Payroll</span></div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>📅 Payroll Period</h2>
+            <div class="panel-actions">
+              <select id="payroll-month" style="background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.5rem .9rem;color:var(--text);font-size:.85rem;outline:none;">
+                <option>September 2026</option>
+                <option>August 2026</option>
+                <option>July 2026</option>
+              </select>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="overview-cards" id="run-payroll-cards" style="margin-bottom:1.5rem;"><!-- JS --></div>
+            <div style="overflow-x:auto;">
+              <table class="staff-table" id="run-payroll-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Basic Salary</th>
+                    <th>Allowances</th>
+                    <th>Deductions</th>
+                    <th>Net Pay</th>
+                    <th>M-Pesa</th>
+                    <th>Include</th>
+                  </tr>
+                </thead>
+                <tbody id="run-payroll-tbody"><!-- JS --></tbody>
+              </table>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;gap:1rem;flex-wrap:wrap;">
+              <div style="text-align:right;margin-right:auto;">
+                <div style="font-size:.82rem;color:var(--text-muted);">Total Net Payroll</div>
+                <div id="total-net-display" style="font-size:1.8rem;font-weight:700;color:var(--gold);">KES 0</div>
+              </div>
+              <button class="btn btn-outline" onclick="showTab('settings',null)">⚙️ Adjust Settings</button>
+              <button class="btn btn-gold" onclick="openRunModal()">▶️ &nbsp;Disburse via M-Pesa</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ HISTORY TAB ════ -->
+      <div id="tab-history" class="dash-tab" style="display:none;">
+        <div class="page-title">Payroll History</div>
+        <div class="page-breadcrumb">OJ Apartment &rsaquo; <span>History</span></div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>🗂️ All Transactions</h2>
+            <div class="panel-actions">
+              <select id="hist-filter" onchange="renderHistory()" style="background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.5rem .9rem;color:var(--text);font-size:.85rem;outline:none;">
+                <option value="">All Types</option>
+                <option value="salary">Salary</option>
+                <option value="withdrawal">Withdrawal</option>
+                <option value="bonus">Bonus</option>
+              </select>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="tx-list" id="history-tx-list"><!-- JS --></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ WITHDRAWAL TAB ════ -->
+      <div id="tab-withdrawal" class="dash-tab" style="display:none;">
+        <div class="page-title">M-Pesa Withdrawals</div>
+        <div class="page-breadcrumb">OJ Apartment &rsaquo; <span>Withdrawals</span></div>
+
+        <div class="withdrawal-grid">
+          <!-- Left: withdrawal form -->
+          <div class="withdrawal-form-box">
+            <h3>📲 Send Money via M-Pesa</h3>
+
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Recipient</label>
+              <select id="wd-recipient" onchange="prefillRecipient()" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;">
+                <option value="">— Select staff member —</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">M-Pesa Number</label>
+              <div class="mpesa-input-prefix">
+                <div class="mpesa-prefix-label">🇰🇪 +254</div>
+                <input type="tel" id="wd-phone" placeholder="7XX XXX XXX" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Amount (KES)</label>
+              <input type="number" id="wd-amount" placeholder="e.g. 25000" min="1"
+                oninput="updateWdPreview()"
+                style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;" />
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Reason</label>
+              <select id="wd-reason" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;">
+                <option>Monthly Salary</option>
+                <option>Bonus</option>
+                <option>Advance</option>
+                <option>Allowance</option>
+                <option>Reimbursement</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="amount-display-box" id="wd-preview" style="display:none;">
+              <div>
+                <div class="ad-label">Sending to</div>
+                <div style="font-weight:600;font-size:.95rem;" id="wd-preview-name">—</div>
+                <div style="font-size:.78rem;color:var(--text-muted);" id="wd-preview-phone">+254 —</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="ad-label">Amount</div>
+                <div class="ad-value" id="wd-preview-amount">KES 0</div>
+              </div>
+            </div>
+
+            <button class="btn btn-full" id="wd-send-btn"
+              style="background:linear-gradient(135deg,#006633,#00a650);color:#fff;border:none;padding:.85rem;font-size:.95rem;border-radius:10px;cursor:pointer;font-weight:600;margin-top:.25rem;"
+              onclick="sendWithdrawal()">
+              📲 &nbsp;Send via M-Pesa
+            </button>
+          </div>
+
+          <!-- Right: recent withdrawals -->
+          <div>
+            <div class="withdrawal-form-box" style="height:100%;">
+              <h3>🕒 Recent Withdrawals</h3>
+              <div class="tx-list" id="wd-tx-list"><!-- JS --></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STK status panel (hidden until send) -->
+        <div id="wd-stk-panel" style="display:none;margin-top:1.5rem;">
+          <div class="panel">
+            <div class="panel-header"><h2>📲 M-Pesa STK Push Status</h2></div>
+            <div class="panel-body">
+              <div style="text-align:center;margin-bottom:1.5rem;">
+                <div style="font-size:2.5rem;">📱</div>
+                <h3 style="margin:.5rem 0 .25rem;">Request sent to <span id="stk-phone-label" style="color:var(--gold);"></span></h3>
+                <p style="font-size:.85rem;color:var(--text-muted);">Ask the recipient to enter their M-Pesa PIN to confirm.</p>
+              </div>
+              <div class="run-steps" id="wd-stk-steps">
+                <div class="run-step done"   id="wstk-1"><span class="rs-icon">✅</span> STK push dispatched<span class="run-tick">✓</span></div>
+                <div class="run-step active" id="wstk-2"><span class="rs-icon">🔔</span> Waiting for PIN confirmation<span class="run-spinner"></span></div>
+                <div class="run-step"        id="wstk-3"><span class="rs-icon">✅</span> Payment confirmed</div>
+                <div class="run-step"        id="wstk-4"><span class="rs-icon">📩</span> Receipt sent to recipient</div>
+              </div>
+              <button class="btn btn-outline" style="margin-top:.75rem;" onclick="cancelWdStk()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ SETTINGS TAB ════ -->
+      <div id="tab-settings" class="dash-tab" style="display:none;">
+        <div class="page-title">Payroll Settings</div>
+        <div class="page-breadcrumb">OJ Apartment &rsaquo; <span>Settings</span></div>
+
+        <div class="settings-grid">
+
+          <!-- Pay schedule -->
+          <div class="settings-card">
+            <h3>📅 Pay Schedule</h3>
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Pay Frequency</label>
+              <select id="set-frequency" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.65rem .9rem;color:var(--text);font-size:.88rem;outline:none;">
+                <option>Monthly</option>
+                <option>Bi-weekly</option>
+                <option>Weekly</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Pay Day</label>
+              <select id="set-payday" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.65rem .9rem;color:var(--text);font-size:.88rem;outline:none;">
+                <option>28th of every month</option>
+                <option>Last day of month</option>
+                <option>1st of next month</option>
+                <option>25th of every month</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Currency</label>
+              <select id="set-currency" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.65rem .9rem;color:var(--text);font-size:.88rem;outline:none;">
+                <option>KES — Kenyan Shilling</option>
+                <option>USD — US Dollar</option>
+                <option>NGN — Nigerian Naira</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Deductions -->
+          <div class="settings-card">
+            <h3>➖ Statutory Deductions</h3>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">NHIF</div>
+                <div class="toggle-desc">National Health Insurance Fund</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-nhif" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">NSSF</div>
+                <div class="toggle-desc">National Social Security Fund</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-nssf" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">PAYE Tax</div>
+                <div class="toggle-desc">Pay As You Earn Income Tax</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-paye" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Housing Levy</div>
+                <div class="toggle-desc">Affordable Housing Fund (1.5%)</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-housing" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="form-group" style="margin-top:1rem;">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Custom Deduction %</label>
+              <input type="number" id="set-custom-ded" placeholder="0" min="0" max="50"
+                style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.65rem .9rem;color:var(--text);font-size:.88rem;outline:none;" />
+            </div>
+          </div>
+
+          <!-- Allowances -->
+          <div class="settings-card">
+            <h3>➕ Allowances</h3>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">House Allowance</div>
+                <div class="toggle-desc">15% of basic salary</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-house-allow" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Transport Allowance</div>
+                <div class="toggle-desc">Fixed KES 3,000/month</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-transport" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Medical Allowance</div>
+                <div class="toggle-desc">Fixed KES 2,000/month</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-medical" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Overtime Pay</div>
+                <div class="toggle-desc">1.5× hourly rate</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-overtime" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- M-Pesa / disbursement -->
+          <div class="settings-card">
+            <h3>📲 M-Pesa Disbursement</h3>
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Paybill / Till Number</label>
+              <input type="text" id="set-shortcode" value="522522" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.65rem .9rem;color:var(--text);font-size:.88rem;outline:none;" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Daraja Consumer Key</label>
+              <input type="password" id="set-consumer-key" placeholder="••••••••••••••••" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.65rem .9rem;color:var(--text);font-size:.88rem;outline:none;" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Daraja Consumer Secret</label>
+              <input type="password" id="set-consumer-secret" placeholder="••••••••••••••••" style="width:100%;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:.65rem .9rem;color:var(--text);font-size:.88rem;outline:none;" />
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Auto-disburse on pay day</div>
+                <div class="toggle-desc">Sends M-Pesa to all active staff automatically</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-auto-disburse" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Notifications -->
+          <div class="settings-card">
+            <h3>🔔 Notifications</h3>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Payroll Reminders</div>
+                <div class="toggle-desc">Alert 3 days before pay day</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-remind" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">SMS Confirmation</div>
+                <div class="toggle-desc">Send SMS receipt to each employee</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-sms" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Email Reports</div>
+                <div class="toggle-desc">Monthly payroll summary to manager</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-email-report" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Danger zone -->
+          <div class="settings-card" style="border-color:rgba(224,92,92,.3);">
+            <h3 style="color:#e05c5c;">⚠️ Danger Zone</h3>
+            <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;">These actions are irreversible. Proceed with caution.</p>
+            <button class="btn btn-outline" style="border-color:#e05c5c;color:#e05c5c;width:100%;margin-bottom:.75rem;" onclick="confirmReset()">🗑️ Reset All Payroll Data</button>
+            <button class="btn btn-outline" style="border-color:#e05c5c;color:#e05c5c;width:100%;" onclick="exportData()">📤 Export &amp; Wipe Records</button>
+          </div>
+
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;gap:1rem;">
+          <button class="btn btn-outline" onclick="loadSettings()">↩ Reset to Defaults</button>
+          <button class="btn btn-gold" onclick="saveSettings()">💾 Save Settings</button>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- end dashboard-wrap -->
+
+  <!-- ════ ADD STAFF MODAL ════ -->
+  <div class="modal-overlay" id="add-staff-modal">
+    <div class="modal" style="max-width:520px;">
+      <button class="modal-close" onclick="closeModal('add-staff-modal')">✕</button>
+      <h2 id="add-staff-title">Add Staff Member</h2>
+      <p class="modal-sub">Fill in the employee details below.</p>
+      <input type="hidden" id="edit-staff-id" value="" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Full Name</label>
+          <input type="text" id="as-name" placeholder="Jane Wanjiku" style="width:100%;background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Email</label>
+          <input type="email" id="as-email" placeholder="jane@email.com" style="width:100%;background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">M-Pesa Number</label>
+          <div class="mpesa-input-prefix" style="background:var(--dark-mid);">
+            <div class="mpesa-prefix-label">🇰🇪 +254</div>
+            <input type="tel" id="as-phone" placeholder="7XX XXX XXX" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Department</label>
+          <select id="as-dept" style="width:100%;background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;">
+            <option>Management</option>
+            <option>Security</option>
+            <option>Maintenance</option>
+            <option>Cleaning</option>
+            <option>Reception</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Job Role</label>
+          <input type="text" id="as-role" placeholder="e.g. Security Guard" style="width:100%;background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Basic Salary (KES)</label>
+          <input type="number" id="as-salary" placeholder="e.g. 30000" min="0" style="width:100%;background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:.4rem;">Status</label>
+          <select id="as-status" style="width:100%;background:var(--dark-mid);border:1px solid var(--dark-border);border-radius:8px;padding:.7rem 1rem;color:var(--text);font-size:.9rem;outline:none;">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+        <button class="btn btn-outline btn-full" onclick="closeModal('add-staff-modal')">Cancel</button>
+        <button class="btn btn-gold btn-full" onclick="saveStaff()">💾 Save Employee</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ RUN PAYROLL MODAL ════ -->
+  <div class="modal-overlay" id="run-payroll-modal">
+    <div class="modal" style="max-width:500px;">
+      <button class="modal-close" onclick="closeModal('run-payroll-modal')">✕</button>
+      <h2>▶️ Run Payroll</h2>
+      <p class="modal-sub" id="run-modal-sub">Disbursing salaries via M-Pesa for September 2026</p>
+
+      <!-- Summary before run -->
+      <div id="run-pre-section">
+        <div id="run-summary"><!-- JS --></div>
+        <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+          <button class="btn btn-outline btn-full" onclick="closeModal('run-payroll-modal')">Cancel</button>
+          <button class="btn btn-gold btn-full" onclick="startPayrollRun()">Confirm &amp; Disburse</button>
+        </div>
+      </div>
+
+      <!-- Progress during run -->
+      <div id="run-progress-section" style="display:none;">
+        <div class="run-steps" id="run-steps-list"><!-- JS --></div>
+        <div style="text-align:center;margin-top:1.25rem;font-size:.85rem;color:var(--text-muted);" id="run-status-text">Processing…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+  <script src="payroll.js"></script>
+  <script>
+    /* Nav drawer */
+    const toggle   = document.getElementById('nav-toggle');
+    const drawer   = document.getElementById('nav-drawer');
+    const backdrop = document.getElementById('nav-backdrop');
+    function openDrawer()  { toggle.classList.add('open');    drawer.classList.add('open');    toggle.setAttribute('aria-expanded','true');  document.body.style.overflow='hidden'; }
+    function closeDrawer() { toggle.classList.remove('open'); drawer.classList.remove('open'); toggle.setAttribute('aria-expanded','false'); document.body.style.overflow=''; }
+    toggle.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+    backdrop.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => { if(e.key==='Escape'){ closeDrawer(); closeAllModals(); } });
+
+    function closeAllModals() {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+      document.body.style.overflow = '';
+    }
+
+    /* Init */
+    initPayroll();
+  </script>
+</body>
+</html>

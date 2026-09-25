@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vacancies — OJ Apartment</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .nav-toggle {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      z-index: 201;
+    }
+    .nav-toggle span {
+      display: block;
+      width: 26px;
+      height: 2.5px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .nav-toggle.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .nav-toggle.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .nav-toggle.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+    .nav-drawer { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+    .nav-drawer-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.7); opacity: 0; transition: opacity 0.3s ease; backdrop-filter: blur(4px); }
+    .nav-drawer-panel {
+      position: absolute; top: 0; right: 0;
+      width: min(320px, 85vw); height: 100%;
+      background: var(--dark-card); border-left: 1px solid var(--dark-border);
+      transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column;
+      padding: 5.5rem 2rem 2rem; gap: 0;
+    }
+    .nav-drawer.open { pointer-events: all; }
+    .nav-drawer.open .nav-drawer-backdrop { opacity: 1; }
+    .nav-drawer.open .nav-drawer-panel { transform: translateX(0); }
+    .nav-drawer-panel a {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 1rem 0; border-bottom: 1px solid var(--dark-border);
+      font-size: 1rem; color: var(--text); transition: color 0.2s;
+    }
+    .nav-drawer-panel a:hover { color: var(--gold); }
+    .nav-drawer-panel a .nav-icon { font-size: 1.2rem; width: 24px; text-align: center; }
+    .nav-drawer-logo { font-size: 1.1rem; font-weight: 700; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.25rem; }
+    .nav-drawer-tagline { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--dark-border); }
+    .nav-drawer-cta { margin-top: 2rem; }
+    @media (max-width: 768px) {
+      .navbar .nav-links { display: none; }
+      .nav-toggle { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">OJ <span>Apartment</span></div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="apartments.html" class="active">Vacancies</a>
+      <a href="payroll.html">💼 Payroll</a>
+      <span id="user-greeting" style="font-size:0.85rem;color:var(--text-muted);"></span>
+      <button onclick="revokeAccess()" class="btn btn-outline" style="padding:0.4rem 1rem;font-size:0.82rem;">Sign Out</button>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Mobile drawer -->
+  <div class="nav-drawer" id="nav-drawer" role="dialog" aria-modal="true" aria-label="Navigation menu">
+    <div class="nav-drawer-backdrop" id="nav-backdrop"></div>
+    <div class="nav-drawer-panel">
+      <div class="nav-drawer-logo">OJ Apartment</div>
+      <div class="nav-drawer-tagline">Premium Residential Building · Lagos</div>
+      <a href="index.html" onclick="closeDrawer()"><span class="nav-icon">🏠</span> Home</a>
+      <a href="apartments.html" onclick="closeDrawer()"><span class="nav-icon">🔍</span> Vacancies</a>
+      <a href="payroll.html" onclick="closeDrawer()"><span class="nav-icon">💼</span> Payroll</a>
+      <a href="index.html#about" onclick="closeDrawer()"><span class="nav-icon">🏢</span> About</a>
+      <a href="index.html#pricing" onclick="closeDrawer()"><span class="nav-icon">💳</span> Access Plans</a>
+      <div class="nav-drawer-cta">
+        <button onclick="revokeAccess(); closeDrawer();" class="btn btn-outline btn-full">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const toggle = document.getElementById('nav-toggle');
+    const drawer = document.getElementById('nav-drawer');
+    const backdrop = document.getElementById('nav-backdrop');
+    function openDrawer() { toggle.classList.add('open'); drawer.classList.add('open'); toggle.setAttribute('aria-expanded','true'); document.body.style.overflow='hidden'; }
+    function closeDrawer() { toggle.classList.remove('open'); drawer.classList.remove('open'); toggle.setAttribute('aria-expanded','false'); document.body.style.overflow=''; }
+    toggle.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+    backdrop.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  </script>
+
+  <!-- Access Gate (shown if not paid) -->
+  <div id="access-gate" style="display:none;min-height:80vh;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:3rem 2rem;">
+    <div style="font-size:4rem;margin-bottom:1.5rem;">🔒</div>
+    <h2 style="font-size:2rem;margin-bottom:0.75rem;">Access Required</h2>
+    <p style="color:var(--text-muted);max-width:420px;margin:0 auto 2rem;">This page is available to paying members only. Purchase an access plan to browse all available units.</p>
+    <a href="index.html#pricing" class="btn btn-gold btn-lg">View Access Plans</a>
+  </div>
+
+  <!-- Main Content (shown after payment) -->
+  <div id="main-content" style="display:none;">
+    <div class="apartments-page">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>Available Units</h1>
+        <p>Browse all vacancies at OJ Apartment — <span id="available-count">12</span> units currently available.</p>
+      </div>
+
+      <!-- Access Banner -->
+      <div class="access-banner">
+        ✅ &nbsp;<strong id="access-plan-label">Standard Access</strong> &nbsp;— You have full access to all listings. Your access expires: <strong id="access-expiry" style="margin-left:0.3rem;"></strong>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-bar">
+        <select id="filter-type" onchange="filterApts()">
+          <option value="">All Types</option>
+          <option value="Studio">Studio</option>
+          <option value="1-Bedroom">1 Bedroom</option>
+          <option value="2-Bedroom">2 Bedrooms</option>
+          <option value="3-Bedroom">3 Bedrooms</option>
+          <option value="Penthouse">Penthouse</option>
+        </select>
+        <select id="filter-status" onchange="filterApts()">
+          <option value="">All Status</option>
+          <option value="available">Available</option>
+          <option value="reserved">Reserved</option>
+        </select>
+        <select id="filter-floor" onchange="filterApts()">
+          <option value="">All Floors</option>
+          <option value="1">Floor 1</option>
+          <option value="2">Floor 2</option>
+          <option value="3">Floor 3</option>
+          <option value="4">Floor 4</option>
+          <option value="5">Floor 5</option>
+          <option value="6">Floor 6</option>
+          <option value="7">Floor 7</option>
+          <option value="8">Floor 8</option>
+        </select>
+        <input type="number" id="filter-price" placeholder="Max rent ($)" oninput="filterApts()" style="width:160px;" />
+        <span class="filter-count" id="filter-count"></span>
+      </div>
+
+      <!-- Apartments Grid -->
+      <div class="apartments-grid" id="apartments-grid">
+        <!-- Dynamically populated by script.js -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Apartment Detail Modal -->
+  <div class="modal-overlay" id="apt-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div id="modal-body">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Reservation Confirmation Modal -->
+  <div class="modal-overlay" id="reserve-modal">
+    <div class="modal" style="max-width:440px;">
+      <button class="modal-close" onclick="closeReserveModal()">✕</button>
+      <div style="text-align:center;">
+        <div style="font-size:3rem;margin-bottom:1rem;">🏠</div>
+        <h2 style="margin-bottom:0.5rem;">Reserve This Unit?</h2>
+        <p id="reserve-modal-desc" style="color:var(--text-muted);font-size:0.9rem;margin-bottom:2rem;"></p>
+        <div class="form-group" style="text-align:left;">
+          <label>Preferred Move-in Date</label>
+          <input type="date" id="movein-date" min="" />
+        </div>
+        <div class="form-group" style="text-align:left;">
+          <label>Additional Notes (optional)</label>
+          <input type="text" id="reserve-notes" placeholder="Any special requests..." />
+        </div>
+        <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+          <button class="btn btn-outline btn-full" onclick="closeReserveModal()">Cancel</button>
+          <button class="btn btn-gold btn-full" onclick="confirmReservation()">Confirm Reservation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+  <script>
+    // Set minimum move-in date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('movein-date').min = today;
+    document.getElementById('movein-date').value = today;
+
+    // Init page
+    initApartmentsPage();
+  </script>
+</body>
+</html>

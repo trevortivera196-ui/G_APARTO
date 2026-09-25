@@ -1,0 +1,18 @@
+# Protect config and non-PHP files from direct browser access
+<FilesMatch "\.(sql|log|json|md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block direct access to logs folder
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^logs/ - [F,L]
+</IfModule>
+
+# JSON responses — no caching for API endpoints
+<IfModule mod_headers.c>
+    Header set Cache-Control "no-store, no-cache, must-revalidate"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+</IfModule>
